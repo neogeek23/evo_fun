@@ -3,7 +3,7 @@ import names
 
 genesis_count = 12         # how many lifeforms to start with
 apocalypse = 100            # how many turns until the world takes no more turns
-world_size = 4           # how big is the flat earth
+world_size = 5           # how big is the flat earth
 roll_max = 100              # the upper bound for rolls
 min_health = 800
 max_health = 1000
@@ -420,19 +420,19 @@ class LifeForm:
                     name=names.get_first_name(gender=gender_text),
                     family=family_name
                     )
-                world[local_x][local_y] = child
-                alive_list.append(child)
                 self.paternal_genes = {}
                 self.rounds_pregnant = 0
                 self.pregnant = False
                 self.food = round(self.food/2)
                 self.children.append(child)
-                self.baby_daddy.children.append(child)
+                # self.baby_daddy.children.append(child) # I don't know why this isn't needed, but the above adds the child to both mother and father's child list
                 print(f"{self.baby_daddy.name} {self.baby_daddy.name} & {self.name} {self.family} welcome {child.name} {child.family}.  {self.baby_daddy.name} {self.baby_daddy.name} has {len(self.baby_daddy.children)} children.")
                 for kid in self.baby_daddy.children:
                     print(f"{self.baby_daddy.name} {self.baby_daddy.name} has {kid.name} {kid.family} as his child.")
                 child.parents.append(world[self.x][self.y])
                 child.parents.append(self.baby_daddy)
+                world[local_x][local_y] = child
+                alive_list.append(child)
 
     def eat(self):
         if self.food > self.eat_rate + self.extra_pregnancy_food:
