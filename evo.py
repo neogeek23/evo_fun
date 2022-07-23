@@ -1,9 +1,9 @@
-import sys
 import random
+import names
 
-genesis_count = 10000         # how many lifeforms to start with
+genesis_count = 12         # how many lifeforms to start with
 apocalypse = 100            # how many turns until the world takes no more turns
-world_size = 1000           # how big is the flat earth
+world_size = 4           # how big is the flat earth
 roll_max = 100              # the upper bound for rolls
 min_health = 800
 max_health = 1000
@@ -14,12 +14,14 @@ luck_min_start = 1
 luck_max_start = 8
 resilence_min_start = 1
 resilence_max_start = 5
+intelligence_min_start = 1
+intelligence_max_start = 3
 speed_min_start = 1
 speed_max_start = 5
 restless_min_start = 0
 restless_max_start = 4
-gestation_min_start = 11
-gestation_max_start = 14
+gestation_min_start = 5
+gestation_max_start = 8
 hunger_start = 0
 eat_rate_min_start = 2
 eat_rate_max_start = 7
@@ -30,13 +32,13 @@ greed_max_start = 8
 happiness_min_start = 0
 happiness_max_start = 7
 stingy_min_start = 1
-stingy_max_start = 8
+stingy_max_start = 14
 charm_min_start = 3
 charm_max_start = 14
 beauty_min_start = 20
 beauty_max_start = 40
-awareness_min_start = 1
-awareness_max_start = 4
+reach_min_start = 1
+reach_max_start = 4
 skill_min_start = 8
 skill_max_start = 24
 
@@ -78,13 +80,16 @@ class LifeForm:
 
     # social properties
     happiness = 0       # how happy the lifeform is
-    stingy = 0     # how willing a lifeform is to assist others against happiness
+    stingy = 0          # how willing a lifeform is to assist others against happiness
     charm = 0           # how much this lifeform affects other lifeforms nearby
     beauty = 0          # how preferable a lifeform is for mating
-    awareness = 0       # how far from this lifeform does it care about other lifeform's charm & attractiveness
+    reach = 0           # how far from this lifeform does it care about other lifeform's charm & attractiveness
+    kinship = 0         # how much a lifeform cares about its kin
+    family = ""
+    name = ""
 
     # purely derivied meta properties
-    ancestors = []
+    parents = []
     children = []
     prediction_success_rate = 0
     x = 0               # current x position in the world
@@ -93,6 +98,7 @@ class LifeForm:
     rounds_pregnant = 0
     extra_pregnancy_food = 0
     paternal_genes = {}
+    baby_daddy = None
 
     # methods
     def take_turn(self):
@@ -103,10 +109,13 @@ class LifeForm:
         self.eat()
         self.age()
     
-    def spawn(self, x, y, id, male, luck=0, resilence=0, intelligence=0, health=0, lifetime=0, speed=0, restless=0, mature=False, gestation=0, hunger=0, eat_rate=0, food=0, greed=0, happiness=0, stingy=0, charm=0, beauty=0, awareness=0, skill=0):
+    def spawn(self, x, y, id, male, luck=0, resilence=0, intelligence=0, skill=0, health=0, lifetime=0, speed=0,
+              restless=0, mature=False, gestation=0, hunger=0, eat_rate=0, food=0, greed=0, happiness=0, stingy=0,
+              charm=0, beauty=0, reach=0, kinship=0, name="", family=""):
         self.luck = luck
         self.resilence = resilence
         self.intelligence = intelligence
+        self.skill = skill
         self.health = health
         self.lifetime = lifetime
         self.speed = speed
@@ -124,13 +133,15 @@ class LifeForm:
         self.stingy = stingy
         self.charm = charm
         self.beauty = beauty
-        self.awareness = awareness
-        self.skill = skill
+        self.reach = reach
+        self.kinship = kinship
+        self.name=name
+        self.family=family
         self.x = x
         self.y = y
         self.id = id
 
-    def birth(self, x, y, id, male, food, mother_genes, father_genes):
+    def birth(self, x, y, id, male, food, mother_genes, father_genes, name, family):
         self.male = male
         self.food = food
         self.lifetime = 0
@@ -139,10 +150,14 @@ class LifeForm:
         self.x = x
         self.y = y
         self.id = id
+        self.name = name
+        self.family = family
 
         for key in mother_genes.keys():
             mod = [mother_genes[key], father_genes[key]]
             mod.sort()
+            if key == "skill":
+                mod[0] = round(mod[0]/2)
             setattr(self, key, random.randrange(mod[0], mod[1] + 1))
 
         luck_improve_roll = random.randrange(0, roll_max)
@@ -153,13 +168,9 @@ class LifeForm:
         if beauty_improve_roll <= self.luck + self.beauty:
             self.beauty = self.beauty + 1
 
-        greed_improve_roll = random.randrange(0, roll_max)
-        if greed_improve_roll <= self.luck + self.greed:
-            self.greed = self.greed + 1
-
-        skill_improve_roll = random.randrange(0, roll_max)
-        if skill_improve_roll <= self.luck + self.skill:
-            self.skill = self.skill + 1
+        intelligence_improve_roll = random.randrange(0, roll_max)
+        if intelligence_improve_roll <= self.luck + self.intelligence:
+            self.intelligence = self.intelligence + 1
 
         resilence_improve_roll = random.randrange(0, roll_max)
         if resilence_improve_roll <= self.luck + self.resilence:
@@ -168,10 +179,30 @@ class LifeForm:
         charm_improve_roll = random.randrange(0, roll_max)
         if charm_improve_roll <= self.luck + self.charm:
             self.charm = self.charm + 1
+        
+        greed_improve_roll = random.randrange(0, roll_max)
+        if greed_improve_roll <= self.luck + self.greed:
+            self.greed = self.greed - 1
+
+        stingy_improve_roll = random.randrange(0, roll_max)
+        if stingy_improve_roll <= self.luck + self.stingy:
+            self.stingy = self.stingy - 1
 
     def die(self):
         alive_list.remove(world[self.x][self.y])
         world[self.x][self.y] = None
+
+        print(f"I, {self.name} {self.family}, lived a good life with {len(self.children)} children.")
+        child_luck_sum = 0
+        for child in self.children:
+            child_luck_sum = child_luck_sum + child.luck
+        inheritance_roll = random.randrange(0, roll_max)
+        if inheritance_roll < child_luck_sum:
+            inheritance_split = len(self.children) + 1
+            for child in self.children:
+                child.food = child.food + round(self.food/inheritance_split)
+                # print(f"Inheritance of {round(self.food/inheritance_split)} passed on from {self} to {child}")
+        self.food = 0
 
     def move(self):
         steps_taken = 0
@@ -190,13 +221,16 @@ class LifeForm:
             steps_taken = steps_taken + 1
 
     def give(self, target, ammount):
-        if self.food > self.greed*self.eat_rate + ammount and self.hunger >= 0 and self.happiness + target.luck > self.stingy:
+        if self.food > self.greed*self.eat_rate + ammount - target.luck - target.charm and self.hunger >= 0 and self.happiness + target.luck + target.charm > self.stingy:
             self.food = self.food - ammount
             target.food = target.food + ammount
-            self.happiness = self.happiness + self.luck + self.stingy
+            self.happiness = self.happiness + self.luck + self.stingy + target.charm
             stingy_roll = random.randrange(0, roll_max)
-            if stingy_roll < self.stingy:
-                self.stingy = self.stingy - 1
+            if stingy_roll < target.stingy:
+                target.stingy = target.stingy - 1
+            skill_up_roll = random.randrange(0, target.luck + target.skill)
+            if skill_up_roll > target.skill:
+                target.skill = target.skill + 1
             global gifts; gifts = gifts + 1
         global begs; begs = begs + 1
 
@@ -238,12 +272,12 @@ class LifeForm:
             attempts = 0
             while attempts < self.resilence and not food_found:
                 food_roll = random.randrange(0, roll_max)
-                if food_roll < (self.luck + self.skill):
+                if food_roll < (self.luck + self.skill + self.intelligence):
                     food_found = True
                 attempts = attempts + 1
             if food_found:
                 luck_imapct = random.randrange(0, self.luck)
-                found_ammount_found = luck_imapct*(self.skill - attempts - 1)
+                found_ammount_found = luck_imapct*(self.skill*self.intelligence - attempts - 1)
                 self.food = self.food + found_ammount_found
                 global finds; finds = finds + 1
 
@@ -260,8 +294,8 @@ class LifeForm:
 
     def mingle(self):
         neighbors = [world[i][j] 
-                    for i in range(self.x - self.awareness, self.x + self.awareness + 1) 
-                    for j in range(self.y - self.awareness, self.y + self.awareness + 1) 
+                    for i in range(self.x - self.reach, self.x + self.reach + 1) 
+                    for j in range(self.y - self.reach, self.y + self.reach + 1) 
                     if i > -1 and j > -1 and j < len(world[0]) and i < len(world)]
         random.shuffle(neighbors)
         trade_requests = 0
@@ -279,20 +313,22 @@ class LifeForm:
                     trade_requests = trade_requests + 1
 
                 # mate/conceive
-                if self.male is not neighbor.male and not neighbor.pregnant and not self.pregnant and self.mature and neighbor.mature and neighbor.health + neighbor.beauty*neighbor.luck > self.health:
+                if self.male is not neighbor.male and not neighbor.pregnant and not self.pregnant and self.mature and neighbor.mature and neighbor.health + neighbor.beauty*neighbor.luck*neighbor.charm > self.health:
                     self.mate(neighbor)
                 
                 # attack/ignore
 
     def mate(self, target):
         if self.health + self.beauty*self.luck > target.beauty:
-            self.happiness = self.happiness + self.health + self.beauty*self.luck - target.beauty
+            self.happiness = self.happiness + self.health + self.beauty*self.luck*self.charm - target.beauty
             if self.male and not target.male and not target.pregnant:
                 target.pregnant = True
                 target.rounds_pregnant = 0
                 target.paternal_genes = {
                     "luck": self.luck,
                     "resilence": self.resilence,
+                    "intelligence": self.intelligence,
+                    "skill": self.skill,
                     "health": self.health,
                     "speed": self.speed,
                     "restless": self.restless,
@@ -303,10 +339,12 @@ class LifeForm:
                     "stingy": self.stingy,
                     "charm": self.charm,
                     "beauty": self.beauty,
-                    "awareness": self.awareness,
-                    "skill": self.skill,
+                    "reach": self.reach,
+                    "kinship": self.kinship,
                     "food": round(self.food/2)      # Do not forget, this is not a property on the maternal list, daddy pays up front
                     }
+                target.baby_daddy = self
+                print(f"baby_daddy {self.name} {self.family} is at ({self.x},{self.y}) male thirst, mommy: {target.name} {target.family}")
                 self.food = round(self.food/2)
             elif target.male and not self.male and not self.pregnant:
                 self.pregnant = True
@@ -314,6 +352,8 @@ class LifeForm:
                 self.paternal_genes = {
                     "luck": target.luck,
                     "resilence": target.resilence,
+                    "intelligence": target.intelligence,
+                    "skill": target.skill,
                     "health": target.health,
                     "speed": target.speed,
                     "restless": target.restless,
@@ -324,23 +364,28 @@ class LifeForm:
                     "stingy": target.stingy,
                     "charm": target.charm,
                     "beauty": target.beauty,
-                    "awareness": target.awareness,
-                    "skill": target.skill,
+                    "reach": target.reach,
+                    "kinship": target.kinship,
                     "food": round(target.food/2)
                 }
+                self.baby_daddy = target
+                print(f"baby_daddy {target.name} {target.family} is at ({target.x},{target.y}) female thirst, mommy: {self.name} {self.family}")
                 target.food = round(target.food/2)
         else:
-            self.happiness = self.happiness - (target.beauty - (self.health + self.beauty*self.luck))
+            self.happiness = self.happiness - (target.beauty - (self.health + self.beauty*self.luck*self.charm))
 
     def pregnancy(self):
         if not self.male and self.pregnant:
             if self.rounds_pregnant < self.gestation:
                 self.rounds_pregnant = self.rounds_pregnant + 1
                 self.extra_pregnancy_food = round(self.eat_rate*(self.rounds_pregnant/self.gestation))
+                # print(f"I'm preggers {self.name} {self.family} ({self.x},{self.y}) {self.rounds_pregnant}/{self.gestation} from {self.baby_daddy.name} {self.baby_daddy.family}")
             else:
                 maternal_genes = {
                     "luck": self.luck,
                     "resilence": self.resilence,
+                    "intelligence": self.intelligence,
+                    "skill": self.skill,
                     "health": self.health,
                     "speed": self.speed,
                     "restless": self.restless,
@@ -351,8 +396,8 @@ class LifeForm:
                     "stingy": self.stingy,
                     "charm": self.charm,
                     "beauty": self.beauty,
-                    "awareness": self.awareness,
-                    "skill": self.skill
+                    "reach": self.reach,
+                    "kinship": self.kinship
                 }
                 local_x = random.randrange(0, world_size)
                 local_y = random.randrange(0, world_size)
@@ -360,15 +405,20 @@ class LifeForm:
                     local_x = random.randrange(0, world_size)
                     local_y = random.randrange(0, world_size)
                 global last_id; last_id = last_id + 1
+                xy = random.choice([True, False])
+                gender_text = 'male' if xy else 'female'
+                family_name = self.baby_daddy.family if xy else self.family
                 child = LifeForm()
                 child.birth(
                     x=local_x,
                     y=local_y,
                     id=last_id,
-                    male=random.choice([True, False]),
+                    male=xy,
                     food=round(self.food/2)+self.paternal_genes["food"],
                     mother_genes=maternal_genes,
-                    father_genes=self.paternal_genes
+                    father_genes=self.paternal_genes,
+                    name=names.get_first_name(gender=gender_text),
+                    family=family_name
                     )
                 world[local_x][local_y] = child
                 alive_list.append(child)
@@ -376,6 +426,13 @@ class LifeForm:
                 self.rounds_pregnant = 0
                 self.pregnant = False
                 self.food = round(self.food/2)
+                self.children.append(child)
+                self.baby_daddy.children.append(child)
+                print(f"{self.baby_daddy.name} {self.baby_daddy.name} & {self.name} {self.family} welcome {child.name} {child.family}.  {self.baby_daddy.name} {self.baby_daddy.name} has {len(self.baby_daddy.children)} children.")
+                for kid in self.baby_daddy.children:
+                    print(f"{self.baby_daddy.name} {self.baby_daddy.name} has {kid.name} {kid.family} as his child.")
+                child.parents.append(world[self.x][self.y])
+                child.parents.append(self.baby_daddy)
 
     def eat(self):
         if self.food > self.eat_rate + self.extra_pregnancy_food:
@@ -414,9 +471,16 @@ for creation in range(genesis_count):
         local_x = random.randrange(0, world_size)
         local_y = random.randrange(0, world_size)
     new_creature = LifeForm()
-    new_creature.spawn(x=local_x, y=local_y, id=creation, male=random.choice([True, False]),
+    xy = random.choice([True, False])
+    gender_text = 'male' if xy else 'female'
+    new_creature.spawn(
+        x=local_x, 
+        y=local_y, 
+        id=creation, 
+        male=xy,
         luck=random.randrange(luck_min_start, luck_max_start),
         resilence=random.randrange(resilence_min_start, resilence_max_start),
+        intelligence=random.randrange(intelligence_min_start, intelligence_max_start),
         health=random.randrange(min_health, max_health),
         lifetime=random.randrange(lifetime_min_start, lifetime_max_start),
         speed=random.randrange(speed_min_start, speed_max_start),
@@ -431,8 +495,10 @@ for creation in range(genesis_count):
         stingy=random.randrange(stingy_min_start, stingy_max_start),
         charm=random.randrange(charm_min_start, charm_max_start),
         beauty=random.randrange(beauty_min_start, beauty_max_start),
-        awareness=random.randrange(awareness_min_start, awareness_max_start),
-        skill=random.randrange(skill_min_start, skill_max_start)
+        reach=random.randrange(reach_min_start, reach_max_start),
+        skill=random.randrange(skill_min_start, skill_max_start),
+        name=names.get_first_name(gender=gender_text),
+        family=names.get_last_name()
         )
     world[local_x][local_y] = new_creature
     alive_list.append(new_creature)
@@ -442,5 +508,5 @@ for turn in range(apocalypse):
     for lifeform in alive_list:
         lifeform.take_turn()
         print_world()
-        print(f"turn:\t{turn}\talive: {len(alive_list)}\tbegs: {begs}\tgifts: {gifts}\tthefts: {thefts}\tfinds: {finds}\tid: {lifeform.id}\tluck: {lifeform.luck}\t\tfood:\t{lifeform.food}\teat: {lifeform.eat_rate}\t\thunger: {lifeform.hunger}\thealth: {lifeform.health}\thappiness: {lifeform.happiness}\tage: {lifeform.lifetime}\tposition: ({lifeform.x},{lifeform.y})")
+        print(f"turn:\t{turn}\talive: {len(alive_list)}\tbegs: {begs}\tgifts: {gifts}\tthefts: {thefts}\tfinds: {finds}\t{lifeform.name} {lifeform.family} \tluck: {lifeform.luck}\t\tfood:\t{lifeform.food}\teat: {lifeform.eat_rate}\t\thunger: {lifeform.hunger}\thealth: {lifeform.health}\thappiness: {lifeform.happiness}\tage: {lifeform.lifetime}\tposition: ({lifeform.x},{lifeform.y})")
 
