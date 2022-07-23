@@ -1,9 +1,9 @@
 import random
 import names
 
-genesis_count = 100         # how many lifeforms to start with
+genesis_count = 1000        # how many lifeforms to start with
 apocalypse = 1000           # how many yaers until the world takes no more turns
-world_size = 13             # how big is the flat earth
+world_size = 42             # how big is the flat earth
 roll_max = 100              # the upper bound for rolls
 min_health = 800
 max_health = 1000
@@ -379,7 +379,7 @@ class LifeForm:
                 }
                 self.baby_daddy = target
                 target.food = round(target.food/2)
-            self.mated_recently = True
+            self.mated_recently = self.luck*self.greed > random.randrange(0, roll_max)
         else:
             # if rejected, happiness transfer
             self.happiness = self.happiness + self.beauty*self.luck*self.charm + self.health - target.beauty \
@@ -532,3 +532,4 @@ for year in range(apocalypse):
         output = f"{output}age: {lifeform.lifetime}\t"
         output = f"{output}position: ({lifeform.x},{lifeform.y})"
         print(output)
+
