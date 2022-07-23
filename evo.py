@@ -197,10 +197,8 @@ class LifeForm:
             stingy_roll = random.randrange(0, roll_max)
             if stingy_roll < self.stingy:
                 self.stingy = self.stingy - 1
-            global gifts
-            gifts = gifts + 1
-        global begs
-        begs = begs + 1
+            global gifts; gifts = gifts + 1
+        global begs; begs = begs + 1
 
     def take(self, target, ammount):
         if self.health + self.luck > target.health + target.luck:
@@ -232,8 +230,7 @@ class LifeForm:
             if self.food > 0:
                 target.food = target.food + round(self.food/2)
                 self.food = round(self.food/2)
-        global thefts
-        thefts = thefts + 1
+        global thefts; thefts = thefts + 1
 
     def forage(self):
         if self.mature and self.food < self.greed*self.eat_rate:
@@ -248,8 +245,7 @@ class LifeForm:
                 luck_imapct = random.randrange(0, self.luck)
                 found_ammount_found = luck_imapct*(self.skill - attempts - 1)
                 self.food = self.food + found_ammount_found
-                global finds
-                finds = finds + 1
+                global finds; finds = finds + 1
 
     def age(self):
         self.lifetime = self.lifetime + 1
@@ -363,8 +359,7 @@ class LifeForm:
                 while world[local_x][local_y] is not None:
                     local_x = random.randrange(0, world_size)
                     local_y = random.randrange(0, world_size)
-                global last_id
-                last_id = last_id + 1
+                global last_id; last_id = last_id + 1
                 child = LifeForm()
                 child.birth(
                     x=local_x,
