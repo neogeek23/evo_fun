@@ -13,6 +13,7 @@
 #   more happiness balancing (not having it inherited)
 #   modularize this whole thing
 #   society detection/shift mechanism
+#   trade food for happiness
 
 import random
 import math
