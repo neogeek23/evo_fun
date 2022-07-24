@@ -7,9 +7,8 @@
 #   intelligence grants predictive movements
 #   bonus for kin in requests
 #   bonus for children in requests
-#   world full apocalypse
 #   graphical output
-#   csv outputs
+#   csv outputs12u  
 #   rewrite stats method :(
 #   more happiness balancing (not having it inherited)
 #   modularize this whole thing
