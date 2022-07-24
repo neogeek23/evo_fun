@@ -11,14 +11,15 @@
 #   graphical output
 #   csv outputs
 #   rewrite stats method :(
-#   more happiness balancing
+#   more happiness balancing (not having it inherited)
+#   modularize this whole thing
 
 import random
 import math
 import names
 
 genesis_count = 100        # how many lifeforms to start with
-world_size = 75             # how big is the flat earth
+world_size = 64             # how big is the flat earth
 apocalypse_years = 99       # how many yaers until no more months can pass
 months_in_a_year = 12       # how many months in a year
 roll_max = 100              # the upper bound for rolls
@@ -191,11 +192,11 @@ class LifeForm:
                 mod[0] = round(mod[0]/2)
             setattr(self, key, random.randrange(mod[0], mod[1] + 1))
 
-        luck_improve_roll = random.randrange(0, roll_max)
+        luck_improve_roll = random.randrange(0, roll_max) # maybe [0, luck^2), some social component should be in here when switching to {{society style}}
         if luck_improve_roll <= self.luck:
             self.luck = self.luck + 1
 
-        beauty_improve_roll = random.randrange(0, roll_max)
+        beauty_improve_roll = random.randrange(0, roll_max) # maybe [0, beauty*beauty - luck)
         if beauty_improve_roll <= self.luck + self.beauty:
             self.beauty = self.beauty + 1
 
@@ -463,36 +464,37 @@ class LifeForm:
                 }
                 local_x = random.randrange(0, world_size)
                 local_y = random.randrange(0, world_size)
-                while world[local_x][local_y] is not None:
+                while world[local_x][local_y] is not None and len(alive_list) < world_size*world_size:
                     local_x = random.randrange(0, world_size)
                     local_y = random.randrange(0, world_size)
                 global last_id; last_id = last_id + 1
                 xy = random.choice([True, False])
                 gender_text = 'male' if xy else 'female'
                 family_name = self.baby_daddy.family if xy else self.family
-                child = LifeForm()
-                child.birth(
-                    x=local_x,
-                    y=local_y,
-                    id=last_id,
-                    male=xy,
-                    food=round(self.food/2)+self.paternal_genes["food"],
-                    mother_genes=maternal_genes,
-                    father_genes=self.paternal_genes,
-                    name=names.get_first_name(gender=gender_text),
-                    family=family_name,
-                    birth_month=month%months_in_a_year
-                    )
-                child.parents.append(self)
-                child.parents.append(self.baby_daddy)
+                if len(alive_list) < world_size*world_size:
+                    child = LifeForm()
+                    child.birth(
+                        x=local_x,
+                        y=local_y,
+                        id=last_id,
+                        male=xy,
+                        food=round(self.food/2)+self.paternal_genes["food"],
+                        mother_genes=maternal_genes,
+                        father_genes=self.paternal_genes,
+                        name=names.get_first_name(gender=gender_text),
+                        family=family_name,
+                        birth_month=month%months_in_a_year
+                        )
+                    child.parents.append(self)
+                    child.parents.append(self.baby_daddy)
+                    self.food = round(self.food/2)
+                    self.children.append(child)
+                    self.baby_daddy.children.append(child)
+                    world[local_x][local_y] = child
+                    alive_list.append(child)
                 self.paternal_genes = {}
                 self.rounds_pregnant = 0
                 self.pregnant = False
-                self.food = round(self.food/2)
-                self.children.append(child)
-                self.baby_daddy.children.append(child)
-                world[local_x][local_y] = child
-                alive_list.append(child)
 
     def eat(self):
         if self.food > self.eat_rate + self.extra_pregnancy_food:
@@ -732,7 +734,8 @@ for creation in range(genesis_count):
     alive_list.append(new_creature)
     last_id = creation
 
-for month in range(apocalypse):
+month = 0
+while month < apocalypse and len(alive_list) < world_size*world_size:
     for lifeform in alive_list:
         lifeform.take_turn(month)
         print_world()
@@ -754,6 +757,7 @@ for month in range(apocalypse):
         print(output)
     if len(alive_list) > 0:
         lifeform_stats(month)
+    month = month + 1
 
 # Make a report
 for month in range(len(month_avgs)):
