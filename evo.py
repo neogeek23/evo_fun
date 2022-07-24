@@ -4,12 +4,14 @@
 #       move away from theieves
 #       group by charming lifeforms
 #       group by kin
+#   intelligence grants predictive movements
 #   bonus for kin in requests
 #   bonus for children in requests
 #   world full apocalypse
 #   graphical output
 #   csv outputs
 #   rewrite stats method :(
+#   more happiness balancing
 
 import random
 import math
