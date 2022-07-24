@@ -12,6 +12,7 @@
 #   rewrite stats method :(
 #   more happiness balancing (not having it inherited)
 #   modularize this whole thing
+#   society detection/shift mechanism
 
 import random
 import math
