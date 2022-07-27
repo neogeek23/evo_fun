@@ -16,9 +16,9 @@ draw_world = True
 save_all_drawings = False
 save_some_drawings = 17     # 0 for no, otherwise months for how frequent to snap a shot
 
-genesis_count = 500        # how many lifeforms to start with
-world_size = 100             # how big is the flat earth
-apocalypse_years = 100       # how many yaers until no more months can pass
+genesis_count = 1000        # how many lifeforms to start with
+world_size = 75             # how big is the flat earth
+apocalypse_years = 999      # how many yaers until no more months can pass
 months_in_a_year = 12       # how many months in a year
 roll_max = 100              # the upper bound for rolls
 lifeform_draw_size = 5      # how many pixels a lifeform will get when drawn on the world_board
@@ -278,7 +278,7 @@ class LifeForm:
         self.actions = [self.move, self.forage, self.mingle, self.pregnancy, self.eat, self.push]
         self.love = random.choice(self.loves)
         self.hate = random.choice(self.hates)
-        self.hate_first = random.choice([True, False, False, False])
+        self.hate_first = random.choice([True, False])
         random.shuffle(self.actions)
         self.actions.append(self.age)
 
@@ -404,28 +404,28 @@ class LifeForm:
                     target_y = target_neighbor.y
                 if target_neighbor is not None and self.hate_first:
                     if target_neighbor.x > self.x:
-                        delta_x = -self.speed if target_neighbor.x - self.x > self.speed else -random.randrange(1, target_neighbor.x - self.x)
+                        delta_x = -self.speed if target_neighbor.x - self.x > self.speed else -random.randrange(0, target_neighbor.x - self.x)
                     elif target_neighbor.x < self.x:
-                        delta_x = self.speed if self.x - target_neighbor.x > self.speed else random.randrange(1, self.x - target_neighbor.x)
+                        delta_x = self.speed if self.x - target_neighbor.x > self.speed else random.randrange(0, self.x - target_neighbor.x)
                     else:
                         delta_x = random.choice([1,-1])
                     if target_neighbor.y > self.y:
-                        delta_y = -self.speed if target_neighbor.y - self.y > self.speed else -random.randrange(1, target_neighbor.y - self.y)
+                        delta_y = -self.speed if target_neighbor.y - self.y > self.speed else -random.randrange(0, target_neighbor.y - self.y)
                     elif target_neighbor.y < self.y:
-                        delta_y = self.speed if self.y - target_neighbor.y > self.speed else random.randrange(1, self.y - target_neighbor.y)
+                        delta_y = self.speed if self.y - target_neighbor.y > self.speed else random.randrange(0, self.y - target_neighbor.y)
                     else:
                         delta_y = random.choice([1,-1])
                 elif target_neighbor is not None:
                     if target_neighbor.x > self.x:
-                        delta_x = self.speed if target_neighbor.x - self.x > self.speed else random.randrange(1, target_neighbor.x - self.x)
+                        delta_x = self.speed if target_neighbor.x - self.x > self.speed else random.randrange(0, target_neighbor.x - self.x)
                     elif target_neighbor.x < self.x:
-                        delta_x = -self.speed if self.x - target_neighbor.x > self.speed else -random.randrange(1, self.x - target_neighbor.x)
+                        delta_x = -self.speed if self.x - target_neighbor.x > self.speed else -random.randrange(0, self.x - target_neighbor.x)
                     else:
                         delta_x = 0
                     if target_neighbor.y > self.y:
-                        delta_y = self.speed if target_neighbor.y - self.y > self.speed else random.randrange(1, target_neighbor.y - self.y)
+                        delta_y = self.speed if target_neighbor.y - self.y > self.speed else random.randrange(0, target_neighbor.y - self.y)
                     elif target_neighbor.y < self.y:
-                        delta_y = -self.speed if self.y - target_neighbor.y > self.speed else -random.randrange(1, self.y - target_neighbor.y)
+                        delta_y = -self.speed if self.y - target_neighbor.y > self.speed else -random.randrange(0, self.y - target_neighbor.y)
                     else:
                         delta_y = 0
             x = (self.x + delta_x + world_size) % world_size
@@ -924,12 +924,12 @@ drawn_msgs = [
      ("Low:  250 < Energy <= 500", LifeFormColors.Energy.low),
      ("Dying:  Energy <= 250", LifeFormColors.Energy.dying)],
     [("Joy Block (Top CL) Key:", default_font_color),
-     ("Tops:  Joy > 10000", LifeFormColors.Joy.tops),
-     ("Excess: 4000 < Joy <= 10000", LifeFormColors.Joy.excess),
-     ("High: 1000 < Joy <= 4000", LifeFormColors.Joy.high),
-     ("Medium:  500 < Joy <= 1000", LifeFormColors.Joy.medium),
-     ("Low: 250 < Joy <= 500", LifeFormColors.Joy.low),
-     ("Dying: Joy <= 250", LifeFormColors.Joy.dying)],
+     ("Tops:  Joy > 1000", LifeFormColors.Joy.tops),
+     ("Excess: 650 < Joy <= 1000", LifeFormColors.Joy.excess),
+     ("High: 350 < Joy <= 650", LifeFormColors.Joy.high),
+     ("Medium:  100 < Joy <= 350", LifeFormColors.Joy.medium),
+     ("Low: 50 < Joy <= 100", LifeFormColors.Joy.low),
+     ("Dying: Joy <= 50", LifeFormColors.Joy.dying)],
     [("Love Block (Top CR) Key:", default_font_color),
      ("Wit", LifeFormColors.Loves.wit),
      ("Luck", LifeFormColors.Loves.luck),
@@ -960,8 +960,8 @@ drawn_msgs = [
      ("Female", LifeFormColors.Gender.female)],
     [("Age Block (Bot CL) Key:", default_font_color),
      (f"Baby: Age < {maturity_min_start}", LifeFormColors.Lifetime.baby),
-     (f"Child: {maturity_min_start} <= Age < {maturity_max_start}", LifeFormColors.Lifetime.child),
-     (f"Adult: {maturity_max_start} <= Age < 50", LifeFormColors.Lifetime.adult),
+     (f"Child: {maturity_min_start} <= Age < lifeform's adult age", LifeFormColors.Lifetime.child),
+     (f"Adult: lifeform's adult age <= Age < 50", LifeFormColors.Lifetime.adult),
      ("Old: 50 <= Age < 100", LifeFormColors.Lifetime.old),
      ("Ancient: 100 <= Age ", LifeFormColors.Lifetime.ancient)],
     [("Luck Block (Bot CR) Key:", default_font_color),
@@ -979,7 +979,7 @@ drawn_msgs = [
     ]
 
 def print_world(month):
-    pygame.display.set_caption(f"LifeForms {int(month/months_in_a_year)}.{month % months_in_a_year + 1}")
+    pygame.display.set_caption(f"LifeForms {int(month/months_in_a_year)}.{month % months_in_a_year + 1} {len(alive_list)}")
     world_board.fill((0, 0, 0))
     for x in range(world_size):
         for y in range(world_size):
@@ -1002,15 +1002,15 @@ def print_world(month):
                 else:
                     lifeform_energy = LifeFormColors.Energy.dying
 
-                if world[x][y].joy > 10000:
+                if world[x][y].joy > 1000:
                     lifeform_joy = LifeFormColors.Joy.tops
-                elif world[x][y].joy > 4000:
+                elif world[x][y].joy > 650:
                     lifeform_joy = LifeFormColors.Joy.excess
-                elif world[x][y].joy > 1000:
+                elif world[x][y].joy > 350:
                     lifeform_joy = LifeFormColors.Joy.high
-                elif world[x][y].joy > 500:
+                elif world[x][y].joy > 100:
                     lifeform_joy = LifeFormColors.Joy.medium
-                elif world[x][y].joy > 250:
+                elif world[x][y].joy > 50:
                     lifeform_joy = LifeFormColors.Joy.low
                 else:
                     lifeform_joy = LifeFormColors.Joy.dying
@@ -1055,7 +1055,7 @@ def print_world(month):
                 
                 if world[x][y].lifetime < maturity_min_start:
                     lifeform_lifetime = LifeFormColors.Lifetime.baby
-                elif world[x][y].lifetime < maturity_max_start:
+                elif world[x][y].lifetime < world[x][y].mature_age:
                     lifeform_lifetime = LifeFormColors.Lifetime.child
                 elif world[x][y].lifetime < 50:
                     lifeform_lifetime = LifeFormColors.Lifetime.adult
