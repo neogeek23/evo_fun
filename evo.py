@@ -16,13 +16,13 @@ draw_world = True
 save_all_drawings = False
 save_some_drawings = 17     # 0 for no, otherwise months for how frequent to snap a shot
 
-genesis_count = 600        # how many lifeforms to start with
-world_size = 125             # how big is the flat earth
+genesis_count = 500        # how many lifeforms to start with
+world_size = 100             # how big is the flat earth
 apocalypse_years = 100       # how many yaers until no more months can pass
 months_in_a_year = 12       # how many months in a year
 roll_max = 100              # the upper bound for rolls
 lifeform_draw_size = 5      # how many pixels a lifeform will get when drawn on the world_board
-font_size = 36
+font_size = round(world_size/3) if world_size <= 126 else 42
 min_energy = 800
 max_energy = 1000
 lifetime_min_start = 20
@@ -35,8 +35,8 @@ diligent_min_start = 1
 diligent_max_start = 5
 wit_min_start = 0
 wit_max_start = 8
-speed_min_start = 1
-speed_max_start = 5
+speed_min_start = 2
+speed_max_start = 7
 restless_min_start = 0
 restless_max_start = 4
 gestation_min_start = 7
@@ -121,12 +121,12 @@ class LifeFormColors:
         dying = (220, 28, 19)
 
     class Joy:
-        tops = (0, 0, 255)
-        excess = (31, 31, 255)
-        high = (73, 73, 255)
-        medium = (120, 121, 255)
-        low = (163, 163, 255)
-        dying = (191, 191, 255)
+        tops = (0, 0, 0)
+        excess = (208, 239, 255)
+        high = (42, 157, 244)
+        medium = (24, 123, 205)
+        low = (17, 103, 177)
+        dying = (3, 37, 76)
 
     class Lifetime:
         baby = (132, 255, 159)
@@ -278,7 +278,7 @@ class LifeForm:
         self.actions = [self.move, self.forage, self.mingle, self.pregnancy, self.eat, self.push]
         self.love = random.choice(self.loves)
         self.hate = random.choice(self.hates)
-        self.hate_first = random.choice([True, False])
+        self.hate_first = random.choice([True, False, False, False])
         random.shuffle(self.actions)
         self.actions.append(self.age)
 
@@ -379,7 +379,9 @@ class LifeForm:
         target_y = original_y
         delta_x = random.randrange(-1*self.speed, self.speed + 1)
         delta_y = random.randrange(-1*self.speed, self.speed + 1)
-        while steps_taken < self.speed:
+        while steps_taken < self.restless:
+            target_x = self.x + delta_x
+            target_y = self.y + delta_y
             delta_x = random.randrange(-1*self.speed, self.speed + 1)
             delta_y = random.randrange(-1*self.speed, self.speed + 1)
             if self.wit > 0 and not self.pregnant:
@@ -402,28 +404,28 @@ class LifeForm:
                     target_y = target_neighbor.y
                 if target_neighbor is not None and self.hate_first:
                     if target_neighbor.x > self.x:
-                        delta_x = -1
+                        delta_x = -self.speed if target_neighbor.x - self.x > self.speed else -random.randrange(1, target_neighbor.x - self.x)
                     elif target_neighbor.x < self.x:
-                        delta_x = 1
+                        delta_x = self.speed if self.x - target_neighbor.x > self.speed else random.randrange(1, self.x - target_neighbor.x)
                     else:
                         delta_x = random.choice([1,-1])
                     if target_neighbor.y > self.y:
-                        delta_y = -1
+                        delta_y = -self.speed if target_neighbor.y - self.y > self.speed else -random.randrange(1, target_neighbor.y - self.y)
                     elif target_neighbor.y < self.y:
-                        delta_y = 1
+                        delta_y = self.speed if self.y - target_neighbor.y > self.speed else random.randrange(1, self.y - target_neighbor.y)
                     else:
                         delta_y = random.choice([1,-1])
                 elif target_neighbor is not None:
                     if target_neighbor.x > self.x:
-                        delta_x = 1
+                        delta_x = self.speed if target_neighbor.x - self.x > self.speed else random.randrange(1, target_neighbor.x - self.x)
                     elif target_neighbor.x < self.x:
-                        delta_x = -1
+                        delta_x = -self.speed if self.x - target_neighbor.x > self.speed else -random.randrange(1, self.x - target_neighbor.x)
                     else:
                         delta_x = 0
                     if target_neighbor.y > self.y:
-                        delta_y = 1
+                        delta_y = self.speed if target_neighbor.y - self.y > self.speed else random.randrange(1, target_neighbor.y - self.y)
                     elif target_neighbor.y < self.y:
-                        delta_y = -1
+                        delta_y = -self.speed if self.y - target_neighbor.y > self.speed else -random.randrange(1, self.y - target_neighbor.y)
                     else:
                         delta_y = 0
             x = (self.x + delta_x + world_size) % world_size
@@ -910,8 +912,8 @@ drawn_msgs = [
     [("Food Block (Top FL) Key:", default_font_color),
      ("Low:  Food < Greed*Piggy/Luck", LifeFormColors.Food.low),
      ("Medium: Inbetween", LifeFormColors.Food.medium),
-     ("High: Food < Greed*Piggy", LifeFormColors.Food.high),
-     ("Hunger Block (Bot FL) Key:", default_font_color),
+     ("High: Food < Greed*Piggy", LifeFormColors.Food.high)],
+    [("Hunger Block (Bot FL) Key:", default_font_color),
      ("High:  Hunger < -Luck", LifeFormColors.Hunger.high),
      ("Medium:  -Luck <= Energy < 0", LifeFormColors.Hunger.medium),
      ("Low:  Hunger >= 0", LifeFormColors.Hunger.low)],
@@ -920,9 +922,9 @@ drawn_msgs = [
      ("High:  800 < Energy <= 1000", LifeFormColors.Energy.high),
      ("Medium:  500 < Energy <= 800", LifeFormColors.Energy.medium),
      ("Low:  250 < Energy <= 500", LifeFormColors.Energy.low),
-     ("Dying:  Energy <= 250", LifeFormColors.Energy.dying),
-     ("Joy Block (Top CL) Key:", default_font_color),
-     ("Tops:  Joy > 10000", LifeFormColors.Joy.low),
+     ("Dying:  Energy <= 250", LifeFormColors.Energy.dying)],
+    [("Joy Block (Top CL) Key:", default_font_color),
+     ("Tops:  Joy > 10000", LifeFormColors.Joy.tops),
      ("Excess: 4000 < Joy <= 10000", LifeFormColors.Joy.excess),
      ("High: 1000 < Joy <= 4000", LifeFormColors.Joy.high),
      ("Medium:  500 < Joy <= 1000", LifeFormColors.Joy.medium),
@@ -945,8 +947,8 @@ drawn_msgs = [
      ("Piggy", LifeFormColors.Hates.piggy),
      ("Greed", LifeFormColors.Hates.greed),
      ("Miserly", LifeFormColors.Hates.miserly),
-     ("Lifetime", LifeFormColors.Hates.lifetime),
-     ("Heart Block (Top FR) Key:", default_font_color),
+     ("Lifetime", LifeFormColors.Hates.lifetime)],
+    [("Heart Block (Top FR) Key:", default_font_color),
      ("Love", LifeFormColors.Heart.love),
      ("Hate", LifeFormColors.Heart.hate)],
     [("Gender Block (Bot LC) Key:", default_font_color),
@@ -955,8 +957,8 @@ drawn_msgs = [
      ("Female Pregnancy End", LifeFormColors.Gender.pregnant_round_12),
      ("Recently Mated", LifeFormColors.Gender.mated_recently),
      ("Male", LifeFormColors.Gender.male),
-     ("Female", LifeFormColors.Gender.female),
-     ("Age Block (Bot CL) Key:", default_font_color),
+     ("Female", LifeFormColors.Gender.female)],
+    [("Age Block (Bot CL) Key:", default_font_color),
      (f"Baby: Age < {maturity_min_start}", LifeFormColors.Lifetime.baby),
      (f"Child: {maturity_min_start} <= Age < {maturity_max_start}", LifeFormColors.Lifetime.child),
      (f"Adult: {maturity_max_start} <= Age < 50", LifeFormColors.Lifetime.adult),
@@ -967,14 +969,14 @@ drawn_msgs = [
      (f"High: {luck_max_start} >= Luck > {round(3*(luck_max_start - luck_min_start)/4 + luck_min_start)}", LifeFormColors.Luck.high),
      (f"Medium: {round(3*(luck_max_start - luck_min_start)/4 + luck_min_start)} >= Luck > {round((luck_max_start - luck_min_start)/2)}", LifeFormColors.Luck.medium),
      (f"Low: {round((luck_max_start - luck_min_start)/2)} >= Luck > {round((luck_min_start - luck_max_start)/4 + luck_min_start)}", LifeFormColors.Luck.low),
-     (f"Dying: {round((luck_max_start - luck_min_start)/4 + luck_min_start)} >= Luck ", LifeFormColors.Luck.dying),
-     ("Beauty Block (Bot RC) Key:", default_font_color),
+     (f"Dying: {round((luck_max_start - luck_min_start)/4 + luck_min_start)} >= Luck ", LifeFormColors.Luck.dying)],
+    [("Beauty Block (Bot RC) Key:", default_font_color),
      (f"Excess: Beauty > {beauty_max_start}", LifeFormColors.Beauty.excess),
      (f"High: {beauty_max_start} >= Beauty > {round(3*(beauty_max_start - beauty_min_start)/4 + beauty_min_start)}", LifeFormColors.Beauty.high),
      (f"Medium: {round(3*(beauty_max_start - beauty_min_start)/4 + beauty_min_start)} >= Beauty > {round((beauty_max_start - beauty_min_start)/2)}", LifeFormColors.Beauty.medium),
      (f"Low: {round((beauty_max_start - beauty_min_start)/2)} >= Beauty > {round((beauty_min_start - beauty_max_start)/4 + beauty_min_start)}", LifeFormColors.Beauty.low),
      (f"Dying: {round((beauty_max_start - beauty_min_start)/4 + beauty_min_start)} >= Beauty ", LifeFormColors.Beauty.dying)]
-             ]
+    ]
 
 def print_world(month):
     pygame.display.set_caption(f"LifeForms {int(month/months_in_a_year)}.{month % months_in_a_year + 1}")
