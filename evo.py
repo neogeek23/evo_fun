@@ -17,49 +17,49 @@ import pygame
 log_details = True
 draw_world = True
 save_all_drawings = True
-save_some_drawings = 3     # 0 for no, otherwise months for how frequent to snap a shot
+save_some_drawings = 0     # 0 for no, otherwise months for how frequent to snap a shot
 
-genesis_count = 100         # how many lifeforms to start intellecth
-world_size = 100             # how big is the flat earth
-apocalypse_years = 999      # how many years until no more months can pass
+genesis_count = 2000         # how many lifeforms to start intellecth
+world_size = 500             # how big is the flat earth
+apocalypse_years = 9999      # how many years until no more months can pass
 months_in_a_year = 12       # how many months in a year
 world_difficulty = 100      # the upper bound for rolls, the pve aspect of the simulation
-lifeform_draw_size = 5      # how many pixels a lifeform will get when drawn on the world_board
+lifeform_draw_size = 3      # how many pixels a lifeform will get when drawn on the world_board
 thanos_angry = 0.95         # what fill percentage Thanos will snap half of e/1 out of existance
 tip_the_scale = False       # starts the sim off favoring cooperation
 
 font_size = world_size*lifeform_draw_size//16
 min_health = 800
 max_health = 1000
-lifetime_min_start = 20
-lifetime_max_start = 50
+lifetime_min_start = 15
+lifetime_max_start = 30
 maturity_min_start = 13
 maturity_max_start = 17
 old_age_factor = 2
 ancient_age_factor = 5
 luck_min_start = 1
 luck_max_start = 6
-resilence_min_start = 1
-resilence_max_start = 5
+willpower_min_start = 1
+willpower_max_start = 7
 intellect_min_start = 1
 intellect_max_start = 7
-speed_min_start = 2
-speed_max_start = 5
+speed_min_start = 1
+speed_max_start = 7
 gestation_min_start = 7
 gestation_max_start = 10
 hunger_start = 0
-piggy_min_start = 2
-piggy_max_start = 9
-food_min_start = 60
-food_max_start = 100
-greed_min_start = 1
+piggy_min_start = 19
+piggy_max_start = 24
+food_min_start = 100
+food_max_start = 200
+greed_min_start = 3
 greed_max_start = 8
-mirth_min_start = 0
-mirth_max_start = 7
-mirth_max = 1000
-hostility_min_start = 1
-hostility_max_start = 8
-miserly_min_start = 1
+happiness_min_start = 0
+happiness_max_start = 7
+happiness_max = 1000
+agression_min_start = 3
+agression_max_start = 8
+miserly_min_start = 3
 miserly_max_start = 25
 charm_min_start = 3
 charm_max_start = 14
@@ -111,23 +111,25 @@ class LifeFormColors:
         child = (0, 0, 0)
 
     class Hates:
-        hostility = (94, 15, 35)
+        agression = (94, 15, 35)
         piggy = (108, 193, 178)
         greed = (166, 197, 0)
         miserly = (41, 84, 67)
         lifetime = (242, 105, 12)
+        mature_age = (253, 229, 0)
+        gestation = (255, 255, 214)
 
     class Loves:
         intellect = (65, 105, 225)
         luck = (127, 255, 0)
         skill = (138, 43, 226)
-        resilence = (0, 255, 255)
+        willpower = (0, 255, 255)
         charm = (244, 164, 96)
         beauty = (240, 255, 255)
         food = (245, 222, 179)
         health = (255, 0, 255)
-        mirth = (255, 20, 147)
-        hostility = (255, 69, 0)
+        happiness = (255, 20, 147)
+        agression = (255, 69, 0)
         kinship = (139, 69, 19)
     
     class Health:
@@ -137,7 +139,7 @@ class LifeFormColors:
         low = (234, 76, 70)
         dying = (220, 28, 19)
 
-    class Mirth:
+    class Happiness:
         elated = (237, 28, 36)
         happy = (248, 24, 117)
         pleased = (223, 80, 186)
@@ -197,13 +199,13 @@ class LifeFormColors:
         hater = (255, 255, 0)               # yellow
 
 class LifeForm:
-    loves = ["intellect", "luck", "skill", "resilence", "charm", "beauty", "food", "health", "mirth", "hostility", "kinship"]
-    hates = ["hostility", "piggy", "greed", "miserly", "lifetime"]
+    loves = ["intellect", "luck", "skill", "willpower", "charm", "beauty", "food", "health", "happiness", "agression", "kinship"]
+    hates = ["agression", "gestation", "greed", "miserly", "lifetime", "piggy", "mature_age"]
 
     def __init__(self):
         # broad properties
         self.luck = 0           # catch all positive value - always works in the lifeform's favor, can be used for anything
-        self.resilence = 0           # the sticking to it-ness of the lifeform
+        self.willpower = 0      # the sticking to it-ness of the lifeform
         self.skill = 0          # value of individual performance capability
         self.intellect = 0      # how many turns ahead a lifeform can try to optimize strategies for dependent props
 
@@ -225,12 +227,13 @@ class LifeForm:
         # health properties
         self.hunger = 0         # numerical value representing current hunger, affects health
         self.piggy = 0          # how much food a lifeform tries to eat a turn
+        self.baby_piggy = 0     # piggy value but for starting out life
         self.food = 0           # how much food a lifeform owns
         self.greed = 0          # factor of actual need greater that lifeform requires
 
         # social properties
-        self.mirth = 0          # how positive the lifeform is
-        self.hostility = 0      # how many fights a turn a lifeform can have
+        self.happiness = 0          # how positive the lifeform is
+        self.agression = 0      # how many fights a turn a lifeform can have
         self.miserly = 0        # how willing a lifeform is to assist others
         self.charm = 0          # how much this lifeform affects other lifeforms nearby
         self.beauty = 0         # how preferable a lifeform is for mating
@@ -238,7 +241,7 @@ class LifeForm:
         self.kinship = 0        # how much a lifeform cares about its kin
         self.family = ""
         self.name = ""
-        self.love = ""          # which lifeform property a lifeform wants to be around [intellect, luck, skill, resilence, charm, beauty, food, health]
+        self.love = ""          # which lifeform property a lifeform wants to be around [intellect, luck, skill, willpower, charm, beauty, food, health]
         self.hate = ""          # which lifeform property a lifeform wants to avoid [fights, piggy, greed, miserly, lifetime]
         self.hate_first = False # whether or not the love or its hate is more driving
 
@@ -264,7 +267,7 @@ class LifeForm:
         self.food_found_recently = False
         self.scars = 0
         self.juvenile = False
-        self.previous_mirth = 0
+        self.previous_happiness = 0
         self.neighbor_count = 0
         self.countrymen_count = 0
 
@@ -276,28 +279,29 @@ class LifeForm:
             action(month)
     
     # lifecycle methods
-    def _spawn(self, x, y, id, male, birth_month, luck=0, resilence=0, intellect=0, skill=0, health=0, lifetime=0,
-              speed=0, mature=False, gestation=0, hunger=0, piggy=0, food=0, greed=0, mirth=0,
-              miserly=0, charm=0, beauty=0, reach=0, kinship=0, name="", family="", mature_age=0, hostility=0):
+    def _spawn(self, x, y, id, male, birth_month, luck=0, willpower=0, intellect=0, skill=0, health=0, lifetime=0,
+              speed=0, mature=False, gestation=0, hunger=0, piggy=0, food=0, greed=0, happiness=0,
+              miserly=0, charm=0, beauty=0, reach=0, kinship=0, name="", family="", mature_age=0, agression=0):
         self.luck=luck
-        self.resilence=resilence
+        self.willpower=willpower
         self.intellect=intellect
         self.skill=skill
         self.health=health
         self.lifetime=lifetime
         self.speed=speed
-        self.resilence=resilence
+        self.willpower=willpower
         self.mature=mature
         self.mature_age=mature_age
         self.male=male
         self.pregnant=False
         self.gestation=gestation
         self.hunger=hunger
-        self.piggy=piggy
+        self.baby_piggy=piggy
+        self.piggy=piggy*3
         self.food=food
         self.greed=greed
-        self.mirth=mirth
-        self.hostility=hostility
+        self.happiness=happiness
+        self.agression=agression
         self.miserly=miserly
         self.charm=charm
         self.beauty=beauty
@@ -356,9 +360,9 @@ class LifeForm:
         if intellect_improve_roll <= self.luck + self.intellect:
             self.intellect = self.intellect + 1
 
-        resilence_improve_roll = random.randrange(0, max(self.resilence*self.resilence - self.luck, 1))
-        if resilence_improve_roll <= self.luck + self.resilence:
-            self.resilence = self.resilence + 1
+        willpower_improve_roll = random.randrange(0, max(self.willpower*self.willpower - self.luck, 1))
+        if willpower_improve_roll <= self.luck + self.willpower:
+            self.willpower = self.willpower + 1
         
         charm_improve_roll = random.randrange(0, max(self.charm*self.charm - self.luck, 1))
         if charm_improve_roll <= self.luck + self.charm:
@@ -392,8 +396,10 @@ class LifeForm:
         if hate_change_roll <= self.luck:
             self.hate = random.choice(self.hates)
         
-        setattr(self, self.love, getattr(self, self.love) + 1)
-        setattr(self, self.hate, max(getattr(self, self.hate) - 1, 0))
+        self.baby_piggy=self.piggy
+        harden_or_soften = random.choice([-1,1])
+        setattr(self, self.love, max(getattr(self, self.love) + harden_or_soften, self._get_min_value(self.love)))
+        setattr(self, self.hate, max(getattr(self, self.hate) + harden_or_soften, self._get_min_value(self.hate)))
 
     def _die(self):
         child_luck_sum = 0
@@ -427,7 +433,6 @@ class LifeForm:
             delta_y = random.randrange(-1, 2)
             if self.intellect > 0 and not self.pregnant:
                 target_neighbor = None
-                rationale = ""
                 for neighbor in self.countrymen:    # may want to change later, neighbors uses reach and countrymen uses intellect (probably should be charm though)
                     if target_neighbor is None:
                         target_neighbor = neighbor
@@ -509,11 +514,11 @@ class LifeForm:
 
     def push_pull(self, _):
         temptation_roll = random.randrange(0, world_difficulty)
-        if temptation_roll < self.hostility:
+        if temptation_roll < self.agression:
             moved = 0
             for neighbor in self.neighbors:
                 distance = random.randrange(0, self.reach//2 + 1)
-                if moved < self.hostility:
+                if moved < self.agression:
                     x = neighbor.x
                     y = neighbor.y
                     if self.hate_first and getattr(neighbor, self.hate) > getattr(self, self.hate):
@@ -542,26 +547,28 @@ class LifeForm:
                         neighbor.x = x
                         neighbor.y = y
                         moved = moved + 1
-            if moved > 0 :
-                self.fought_recently = True
+                        if self.hate_first:
+                            neighbor.health = neighbor.health - (distance*distance)
+                            if moved > 0 :
+                                self.fought_recently = True
 
     def forage(self, _):
         def attempt_food_find(penalty=0):
             attempts = 0
-            while attempts < self.resilence and not self.food_found_recently:
-                effort_score = self.skill*self.luck*self.intellect
-                food_roll = random.randrange(0, len(alive_list) + 1)
+            while attempts < self.willpower and not self.food_found_recently:
+                effort_score = self.luck*max(self.intellect, self.willpower)*max(self.skill, self.speed)
+                food_roll = random.randrange(0, len(alive_list) + self.countrymen_count + 1)
                 self.food_found_recently = self.food_found_recently or food_roll < effort_score
                 if food_roll < effort_score:
-                    found_ammount_found = int(math.ceil(self.luck + 1)*(self.skill*self.intellect - (attempts if attempts < self.skill*self.intellect else 0))*(1+(len(self.children)/(1+len(self.children)))))
+                    found_ammount_found = int(math.ceil(self.luck + 1)*(max(self.skill, self.speed)*max(self.intellect, self.willpower) - (attempts if attempts < max(self.skill, self.speed)*max(self.intellect, self.willpower) else 0))*(1+(len(self.children)/(1+len(self.children)))))
                     self.food = self.food + found_ammount_found
                     if found_ammount_found > penalty:
                         self.food = self.food + found_ammount_found - penalty
                     global finds; finds = finds + 1
-                elif self.mirth > self.hunger and self.hunger < 0:
-                    self.mirth = self.mirth + self.hunger
-                elif self.mirth > self.hunger and self.hunger >= 0:
-                    self.mirth = self.mirth - self.hunger
+                elif self.happiness > self.hunger and self.hunger < 0:
+                    self.happiness = self.happiness + self.hunger
+                elif self.happiness > self.hunger and self.hunger >= 0:
+                    self.happiness = self.happiness - self.hunger
                 attempts = attempts + 1
         self.food_found_recently = False
         if self.mature and self.food < self.greed*self.piggy:
@@ -590,11 +597,11 @@ class LifeForm:
                     self.food = self.food + self.hunger
                     self.hunger = 0
             self.health = self.health + self.hunger
-            self.mirth = self.mirth + self.hunger
+            self.happiness = self.happiness + self.hunger
         elif self.luck > 0:
             satisfaction_roll = random.randrange(0, world_difficulty)
             if satisfaction_roll < self.luck:
-                self.mirth = self.mirth + random.randrange(0, self.luck)
+                self.happiness = self.happiness + random.randrange(0, self.luck)
 
     def interact(self, _):
         self.fought_recently = False
@@ -617,18 +624,18 @@ class LifeForm:
         if not self.male and self.pregnant:
             if self.rounds_pregnant < self.gestation:
                 self.rounds_pregnant = self.rounds_pregnant + 1
-                self.extra_pregnancy_food = round(self.piggy*(self.rounds_pregnant/self.gestation))
+                self.extra_pregnancy_food = round(self.baby_piggy*(self.rounds_pregnant/self.gestation))
             else:
                 maternal_genes = {
                     "luck": self.luck,
-                    "resilence": self.resilence,
+                    "willpower": self.willpower,
                     "intellect": self.intellect,
                     "health": self.health,
                     "speed": self.speed,
                     "gestation": self.gestation,
-                    "piggy": self.piggy//2,
+                    "piggy": self.baby_piggy,
                     "greed": self.greed,
-                    "hostility": self.hostility,
+                    "agression": self.agression,
                     "miserly": self.miserly,
                     "charm": self.charm,
                     "beauty": self.beauty,
@@ -666,8 +673,8 @@ class LifeForm:
                         self.baby_daddy.children.append(child)
                         world[child.x][child.y] = child
                         alive_list.append(child)
-                elif self.mirth > 0:
-                    self.mirth = 0    # baby was lost
+                elif self.happiness > 0:
+                    self.happiness = 0    # baby was lost
                 self.paternal_genes = {}
                 self.rounds_pregnant = 0
                 self.extra_pregnancy_food = 0
@@ -676,7 +683,7 @@ class LifeForm:
     def age(self, month):
         if month > 0 and month % months_in_a_year == self.birth_month:
             self.lifetime = self.lifetime + 1
-            self.mirth = self.mirth + self.lifetime//(self.birth_month+1) # happy birthda...month
+            self.happiness = self.happiness + self.lifetime//(self.birth_month+1) # happy birthda...month
         scar_heal_roll = random.randrange(0, self.beauty + 1)
         if self.scars < 0 and scar_heal_roll < self.luck:
             self.scars = self.scars + 1
@@ -688,13 +695,11 @@ class LifeForm:
                 self.juvenile = self.mature_age <= self.lifetime + self.luck
                 if self.juvenile:
                     self.piggy = self.piggy + self.piggy//2
-        if self.mature and self.lifetime//months_in_a_year > self.luck//2:
-            age_roll = random.randrange(self.luck//2, self.lifetime//months_in_a_year)
-            if age_roll > self.luck:
-                self.health = self.health - self.lifetime
-        if self.health < 0 or (self.mirth < 0 and abs(self.mirth) > self.luck):
+        if self.lifetime//self.mature_age > self.luck//2:
+            self.health = self.health - self.lifetime
+        if self.health < 0 or (self.happiness < 0 and abs(self.happiness) > max(max(self.luck, self.willpower),self.intellect)):
             self._die()
-    
+
     # interaction methods
     def _discern(self):
         skill_up_roll = random.randrange(0, self.skill*self.skill + 1)
@@ -704,59 +709,59 @@ class LifeForm:
     def _mingle(self, target):
         if target.beauty + target.scars > self.beauty + self.scars or target.charm + target.luck > self.charm:
             if target.love == self.love:
-                self.mirth = self.mirth + self.luck*target.luck
+                self.happiness = self.happiness + self.luck*target.luck
                 self._discern()
             if target.hate == self.hate:
-                self.mirth = self.mirth + self.luck*target.luck
+                self.happiness = self.happiness + self.luck*target.luck
                 self._discern()
             if getattr(target, self.love) + target.charm > getattr(self, self.love):
                 delta_love = getattr(target, self.love) + target.charm - getattr(self, self.love)
-                self.mirth = self.mirth + delta_love
-                target.mirth = target.mirth + delta_love//4
+                self.happiness = self.happiness + delta_love
+                target.happiness = target.happiness + delta_love//4
                 self._discern()
             if getattr(target, self.hate) - target.charm < getattr(self, self.hate):
                 delta_hate = getattr(target, self.hate) - target.charm + getattr(self, self.hate)
-                self.mirth = self.mirth + delta_hate
-                target.mirth = target.mirth + delta_hate//4
+                self.happiness = self.happiness + delta_hate
+                target.happiness = target.happiness + delta_hate//4
                 self._discern()
             
             if target.hate == self.love and target.beauty + target.scars + target.luck < self.beauty + self.scars:
-                if target.mirth > self.luck*self.charm:
-                    target.mirth = target.mirth - self.luck*self.charm
+                if target.happiness > self.luck*self.charm:
+                    target.happiness = target.happiness - self.luck*self.charm
                 else:
-                    target.mirth = 0
+                    target.happiness = 0
 
-                if self.mirth > target.luck*target.charm:
-                    self.mirth = self.mirth - target.luck*target.charm
+                if self.happiness > target.luck*target.charm:
+                    self.happiness = self.happiness - target.luck*target.charm
                 else:
-                    self.mirth = 0
+                    self.happiness = 0
             if self.hate == target.love and target.beauty + target.scars + target.luck < self.beauty + self.scars:
-                if target.mirth > self.luck*self.charm:
-                    target.mirth = target.mirth - self.luck*self.charm
+                if target.happiness > self.luck*self.charm:
+                    target.happiness = target.happiness - self.luck*self.charm
                 else:
-                    target.mirth = 0
+                    target.happiness = 0
 
-                if self.mirth > target.luck*target.charm:
-                    self.mirth = self.mirth - target.luck*target.charm
+                if self.happiness > target.luck*target.charm:
+                    self.happiness = self.happiness - target.luck*target.charm
                 else:
-                    self.mirth = 0
+                    self.happiness = 0
             if getattr(target, self.love) + target.charm < getattr(self, self.love) and target.beauty + target.scars + target.luck < self.beauty + self.scars:
                 delta_love = getattr(self, self.love) - target.charm - getattr(target, self.love)
-                if target.mirth > delta_love:
-                    target.mirth = target.mirth - delta_love
+                if target.happiness > delta_love:
+                    target.happiness = target.happiness - delta_love
                 else:
-                    target.mirth = 0
-                self.mirth = self.mirth + delta_love//4
+                    target.happiness = 0
+                self.happiness = self.happiness + delta_love//4
             if getattr(target, self.hate) - target.charm > getattr(self, self.hate) and target.beauty + target.scars + target.luck < self.beauty + self.scars:
                 delta_hate = getattr(target, self.hate) - target.charm + getattr(self, self.hate)
-                if target.mirth > delta_hate:
-                    target.mirth = target.mirth - delta_hate
+                if target.happiness > delta_hate:
+                    target.happiness = target.happiness - delta_hate
                 else:
-                    target.mirth = 0
-                self.mirth = self.mirth + delta_hate//4
+                    target.happiness = 0
+                self.happiness = self.happiness + delta_hate//4
 
     def _minister(self, target):
-        if self.neighbor_count < self.charm or self.family == target.family or self.miserly < target.piggy - target.food + target.hunger:
+        if self.family == target.family or self.miserly < target.piggy - target.food + target.hunger:
             target._charity(self)
 
     def _give(self, target, ammount):
@@ -767,10 +772,10 @@ class LifeForm:
             if self.food >= ammount:
                 self.food = self.food - ammount
                 target.food = target.food + ammount
-                self.mirth = self.mirth + ammount
+                self.happiness = self.happiness + ammount
             else:
                 target.food = target.food + self.food
-                self.mirth = self.mirth + self.food
+                self.happiness = self.happiness + self.food
                 self.food = 0
             if do_miserly:
                 miserly_roll = random.randrange(0, world_difficulty)
@@ -813,19 +818,19 @@ class LifeForm:
         begs = begs + 1
 
     def _trade(self, target):
-        if self.mirth > target.mirth and \
+        if self.happiness > target.happiness and \
             self.charm + self.luck > target.charm and \
             target.food > 0 and \
             self.food < self.greed*self.piggy:
-            mirth_split = round(self.mirth - target.mirth)
+            happiness_split = round(self.happiness - target.happiness)
             if target.food > self.greed*self.piggy - self.food:
                 target.food = target.food - (self.greed*self.piggy - self.food)
                 self.food = self.food + (self.greed*self.piggy - self.food)
             else:
                 self.food = self.food + target.food
                 target.food = 0
-            target.mirth = target.mirth + mirth_split
-            self.mirth = self.mirth - mirth_split
+            target.happiness = target.happiness + happiness_split
+            self.happiness = self.happiness - happiness_split
             self.trade_recently = True
 
     def _take(self, target, ammount):
@@ -834,10 +839,10 @@ class LifeForm:
             target.health = target.health - health_delta
             self.health = self.health - health_delta//2
 
-            if target.mirth > ammount - target.luck:
-                target.mirth = target.mirth - ammount + target.luck
+            if target.happiness > ammount - target.luck:
+                target.happiness = target.happiness - ammount + target.luck
             else:
-                target.mirth = 0
+                target.happiness = 0
 
             if target.food > ammount:
                 target.food = target.food - ammount
@@ -850,10 +855,10 @@ class LifeForm:
             target.health = target.health - health_delta//2
             self.health = self.health - health_delta
 
-            if self.mirth > ammount - self.luck:
-                self.mirth = self.mirth - ammount + self.luck
+            if self.happiness > ammount - self.luck:
+                self.happiness = self.happiness - ammount + self.luck
             else:
-                self.mirth = 0
+                self.happiness = 0
 
             if self.food > 0:
                 target.food = target.food + self.food//2
@@ -871,27 +876,27 @@ class LifeForm:
             target.mature and \
             not self._is_sibling(target) and target not in self.parents and target not in self.children and \
             target.health + (target.beauty + target.scars)*target.luck//2 > self.health and \
-            target.mirth + target.charm + getattr(target, target.love) > self.mirth and \
+            target.happiness + target.charm + getattr(target, target.love) > self.happiness and \
             (self.health + self.beauty + self.scars > target.beauty + target.scars + target.health or \
-            self.mirth + self.charm + self.luck > target.mirth + target.charm + target.luck):
+            self.happiness + self.charm + self.luck > target.happiness + target.charm + target.luck):
 
             self_after_glow = max(abs(self.beauty - target.beauty), abs(getattr(self, self.love) - getattr(target, self.love)))
             target_after_glow = max(abs(self.beauty - target.beauty), abs(getattr(target, target.love) - getattr(self, target.love)))
-            self.mirth = self.mirth + self_after_glow
-            target.mirth = target.mirth + target_after_glow
+            self.happiness = self.happiness + self_after_glow
+            target.happiness = target.happiness + target_after_glow
             if self.male and not target.male and not target.pregnant:
                 target.pregnant = True
                 target.rounds_pregnant = 0
                 target.paternal_genes = {
                     "luck": self.luck,
-                    "resilence": self.resilence,
+                    "willpower": self.willpower,
                     "intellect": self.intellect,
                     "health": self.health,
                     "speed": self.speed,
                     "gestation": self.gestation,
-                    "piggy": self.piggy//2,
+                    "piggy": self.baby_piggy,
                     "greed": self.greed,
-                    "hostility": self.hostility,
+                    "agression": self.agression,
                     "miserly": self.miserly,
                     "charm": self.charm,
                     "beauty": self.beauty,
@@ -907,14 +912,14 @@ class LifeForm:
                 self.rounds_pregnant = 0
                 self.paternal_genes = {
                     "luck": target.luck,
-                    "resilence": target.resilence,
+                    "willpower": target.willpower,
                     "intellect": target.intellect,
                     "health": target.health,
                     "speed": target.speed,
                     "gestation": target.gestation,
-                    "piggy": target.piggy//2,
+                    "piggy": target.baby_piggy,
                     "greed": target.greed,
-                    "hostility": target.hostility,
+                    "agression": target.agression,
                     "miserly": target.miserly,
                     "charm": target.charm,
                     "beauty": target.beauty,
@@ -931,7 +936,7 @@ class LifeForm:
                 self.mated_recently = True
 
     def _ire(self, target):
-        if self.mirth < target.mirth and \
+        if self.happiness < target.happiness and \
             self.health > target.health and \
             self.health > 0 and \
             target.health > 0 and \
@@ -965,38 +970,38 @@ class LifeForm:
             random.shuffle(grievances)
             if len(grievances) > 0:
                 if grievances[0] == "food":
-                    self._take(target, target.food - self.food + target.mirth - self.mirth)
+                    self._take(target, target.food - self.food + target.happiness - self.happiness)
                 elif grievances[0] == "hunger":
-                    self._take(target, (-1*self.hunger) + target.hunger + target.mirth - self.mirth)
+                    self._take(target, (-1*self.hunger) + target.hunger + target.happiness - self.happiness)
                 elif grievances[0] == "beauty":
                     delta_beauty = target.beauty + target.scars - (self.beauty + self.scars + target.luck)
                     self.health = self.health - delta_beauty
-                    self.mirth = self.mirth + delta_beauty//2
+                    self.happiness = self.happiness + delta_beauty//2
                     if -1*target.scars <= target.beauty//2:
                         target.scars = target.scars - delta_beauty//2
                     else:
                         target.scars = target.beauty*-1
-                    if target.mirth > delta_beauty:
-                        target.mirth = target.mirth - delta_beauty
+                    if target.happiness > delta_beauty:
+                        target.happiness = target.happiness - delta_beauty
                     else:
-                        target.mirth = 0
+                        target.happiness = 0
                 elif grievances[0] == "intellect":
                     delta_intellect = target.intellect - self.intellect
                     self.health = self.health - delta_intellect
-                    self.mirth = self.mirth + delta_intellect//2
+                    self.happiness = self.happiness + delta_intellect//2
                     target.intellect = target.intellect - delta_intellect
-                    if target.mirth > delta_intellect:
-                        target.mirth = target.mirth - delta_intellect
+                    if target.happiness > delta_intellect:
+                        target.happiness = target.happiness - delta_intellect
                     else:
-                        target.mirth = 0
+                        target.happiness = 0
                 elif grievances[0] == "luck":
                     delta_luck = target.intellect - self.intellect
                     self.health = self.health - delta_luck
-                    self.mirth = self.mirth + delta_luck//2
-                    if target.mirth > delta_luck:
-                        target.mirth = target.mirth - delta_luck
+                    self.happiness = self.happiness + delta_luck//2
+                    if target.happiness > delta_luck:
+                        target.happiness = target.happiness - delta_luck
                     else:
-                        target.mirth = 0
+                        target.happiness = 0
 
                 if self.luck < target.beauty + target.scars:
                     target.scars = target.scars - 1
@@ -1075,12 +1080,14 @@ class LifeForm:
     def _decay(self):
         rot_roll = random.randrange(0, self.food + 1)
         if self.piggy*self.greed*self.luck < rot_roll:
-            rot_prevention = 2*random.randrange(self.resilence//2, self.resilence + self.luck + 1)
+            rot_prevention = 2*random.randrange(self.willpower//2, self.willpower + self.luck + 1)
             self.food = self.food - (self.food//4 - (rot_prevention if rot_prevention <= self.food//8 else self.food//8))
-        if self.mirth - self.previous_mirth > 0 and (random.randrange(0, self.mirth - self.previous_mirth) > self.luck*max(self.charm, self.beauty + self.scars) or self.mirth > mirth_max + self.luck):
-            factor = math.ceil(self.mirth/(self.previous_mirth if self.previous_mirth > 0 else 1))
-            self.mirth = self.mirth//factor + (self.resilence + self.luck if self.resilence + self.luck < self.mirth//factor else (self.resilence + self.luck)//factor)
-        self.previous_mirth = self.mirth
+        if self.happiness - self.previous_happiness > 0 and (random.randrange(0, self.happiness - self.previous_happiness) > self.luck*max(self.charm, self.beauty + self.scars) or self.happiness > happiness_max + self.luck):
+            factor = math.ceil(self.happiness/(self.previous_happiness if self.previous_happiness > 0 else 1)) if self.previous_happiness > 0 else 1
+            self.happiness = self.happiness//factor + (self.willpower + self.luck if self.willpower + self.luck < self.happiness//factor else (self.willpower + self.luck)//factor)
+        lonliness = self.reach*self.reach*4 - self.neighbor_count
+        self.happiness = self.happiness - round(lonliness/(32*math.exp(-((len(alive_list) + genesis_count)/genesis_count))))
+        self.previous_happiness = self.happiness
 
     def _distance_to(self, target):
         dx = abs(target.x - self.x)
@@ -1094,12 +1101,40 @@ class LifeForm:
 
         return math.sqrt(dx*dx + dy*dy)
 
+    def _get_min_value(self, prop):
+        if prop == "intellect":
+            return intellect_min_start
+        elif prop == "luck":
+            return luck_min_start
+        elif prop == "skill":
+            return skill_min_start
+        elif prop == "willpower":
+            return willpower_min_start
+        elif prop == "charm":
+            return charm_min_start
+        elif prop == "beauty":
+            return beauty_min_start
+        elif prop == "agression":
+            return agression_min_start
+        elif prop == "kinship":
+            return kinship_min_start
+        elif prop == "gestation":
+            return gestation_min_start
+        elif prop == "greed":
+            return greed_min_start
+        elif prop == "miserly":
+            return miserly_min_start
+        elif prop == "piggy":
+            return piggy_min_start
+        elif prop == "mature_age":
+            return maturity_min_start
+        return getattr(self, prop)
 
 drawn_msgs = [
     [("Blocks from Top Left to Bottom Right:", default_font_color),
      ("Top Far Left (FL): Food", default_font_color),
      ("Top Left Center (LC): Health", default_font_color),
-     ("Top Center Left (CL): Mirth", default_font_color),
+     ("Top Center Left (CL): Happiness", default_font_color),
      ("Top Center Right (CR)  Love", default_font_color),
      ("Top Right Center (RC): Hate", default_font_color),
      ("Top Far Right (FR): Heart", default_font_color),
@@ -1129,31 +1164,33 @@ drawn_msgs = [
      ("Medium:  400 < Health <= 750", LifeFormColors.Health.medium),
      ("Low:  100 < Health <= 400", LifeFormColors.Health.low),
      ("Dying:  Health <= 100", LifeFormColors.Health.dying)],
-    [("Mirth Block (Top CL) Key:", default_font_color),
-     ("Elated:  Mirth > 1000", LifeFormColors.Mirth.elated),
-     ("Happy: 650 < Mirth <= 1000", LifeFormColors.Mirth.happy),
-     ("Pleased: 350 < Mirth <= 650", LifeFormColors.Mirth.pleased),
-     ("Content:  100 < Mirth <= 350", LifeFormColors.Mirth.content),
-     ("Sad: 0 < Mirth <= 100", LifeFormColors.Mirth.sad),
-     ("Depressed: Mirth <= 0", LifeFormColors.Mirth.depressed)],
+    [("Happiness Block (Top CL) Key:", default_font_color),
+     ("Elated:  Happiness > 1000", LifeFormColors.Happiness.elated),
+     ("Happy: 650 < Happiness <= 1000", LifeFormColors.Happiness.happy),
+     ("Pleased: 350 < Happiness <= 650", LifeFormColors.Happiness.pleased),
+     ("Content:  100 < Happiness <= 350", LifeFormColors.Happiness.content),
+     ("Sad: 0 < Happiness <= 100", LifeFormColors.Happiness.sad),
+     ("Depressed: Happiness <= 0", LifeFormColors.Happiness.depressed)],
     [("Love Block (Top CR) Key:", default_font_color),
      ("Intellect", LifeFormColors.Loves.intellect),
      ("Luck", LifeFormColors.Loves.luck),
      ("Skill", LifeFormColors.Loves.skill),
-     ("Resilence", LifeFormColors.Loves.resilence),
+     ("Willpower", LifeFormColors.Loves.willpower),
      ("Charm", LifeFormColors.Loves.charm),
      ("Beauty", LifeFormColors.Loves.beauty),
      ("Food", LifeFormColors.Loves.food),
      ("Health", LifeFormColors.Loves.health),
-     ("Mirth", LifeFormColors.Loves.mirth),
-     ("Hostility", LifeFormColors.Loves.hostility),
+     ("Happiness", LifeFormColors.Loves.happiness),
+     ("Agression", LifeFormColors.Loves.agression),
      ("Kinship", LifeFormColors.Loves.kinship)],
     [("Hate Block (Top RC) Key:", default_font_color),
-     ("Hostility", LifeFormColors.Hates.hostility),
+     ("Agression", LifeFormColors.Hates.agression),
      ("Piggy", LifeFormColors.Hates.piggy),
      ("Greed", LifeFormColors.Hates.greed),
      ("Miserly", LifeFormColors.Hates.miserly),
-     ("Lifetime", LifeFormColors.Hates.lifetime)],
+     ("Lifetime", LifeFormColors.Hates.lifetime),
+     ("Gestation Period", LifeFormColors.Hates.gestation),
+     ("Maturity", LifeFormColors.Hates.mature_age)],
     [("Heart Block (Top FR) Key:", default_font_color),
      ("Lover", LifeFormColors.Heart.lover),
      ("Fighter (F)", LifeFormColors.Heart.fighter),
@@ -1221,18 +1258,18 @@ def print_world(month):
                 else:
                     lifeform_health = LifeFormColors.Health.dying
 
-                if world[x][y].mirth > 1000:
-                    lifeform_mirth = LifeFormColors.Mirth.elated
-                elif world[x][y].mirth > 650:
-                    lifeform_mirth = LifeFormColors.Mirth.happy
-                elif world[x][y].mirth > 350:
-                    lifeform_mirth = LifeFormColors.Mirth.pleased
-                elif world[x][y].mirth > 100:
-                    lifeform_mirth = LifeFormColors.Mirth.content
-                elif world[x][y].mirth > 0:
-                    lifeform_mirth = LifeFormColors.Mirth.sad
+                if world[x][y].happiness > 1000:
+                    lifeform_happiness = LifeFormColors.Happiness.elated
+                elif world[x][y].happiness > 650:
+                    lifeform_happiness = LifeFormColors.Happiness.happy
+                elif world[x][y].happiness > 350:
+                    lifeform_happiness = LifeFormColors.Happiness.pleased
+                elif world[x][y].happiness > 100:
+                    lifeform_happiness = LifeFormColors.Happiness.content
+                elif world[x][y].happiness > 0:
+                    lifeform_happiness = LifeFormColors.Happiness.sad
                 else:
-                    lifeform_mirth = LifeFormColors.Mirth.depressed
+                    lifeform_happiness = LifeFormColors.Happiness.depressed
 
                 if world[x][y].fought_recently and world[x][y].gave_recently and world[x][y].trade_recently:
                     lifeform_heart = LifeFormColors.Heart.give_fight_trade
@@ -1344,7 +1381,7 @@ def print_world(month):
                 pygame.draw.rect(world_board, (255,255,255), (1*(world_size*lifeform_draw_size + 1) - 1, 0, 1, world_size*lifeform_draw_size))
                 pygame.draw.rect(world_board, lifeform_health, (x*lifeform_draw_size + 1*(world_size*lifeform_draw_size + 1), y*lifeform_draw_size, lifeform_draw_size, lifeform_draw_size))
                 pygame.draw.rect(world_board, (255,255,255), (2*(world_size*lifeform_draw_size + 1) - 1, 0, 1, world_size*lifeform_draw_size))
-                pygame.draw.rect(world_board, lifeform_mirth, (x*lifeform_draw_size + 2*(world_size*lifeform_draw_size + 1), y*lifeform_draw_size, lifeform_draw_size, lifeform_draw_size))
+                pygame.draw.rect(world_board, lifeform_happiness, (x*lifeform_draw_size + 2*(world_size*lifeform_draw_size + 1), y*lifeform_draw_size, lifeform_draw_size, lifeform_draw_size))
                 pygame.draw.rect(world_board, (255,255,255), (3*(world_size*lifeform_draw_size + 1) - 1, 0, 1, world_size*lifeform_draw_size))
                 pygame.draw.rect(world_board, lifeform_love, (x*lifeform_draw_size + 3*(world_size*lifeform_draw_size + 1), y*lifeform_draw_size, lifeform_draw_size, lifeform_draw_size))
                 pygame.draw.rect(world_board, (255,255,255), (4*(world_size*lifeform_draw_size + 1) - 1, 0, 1, world_size*lifeform_draw_size))
@@ -1369,7 +1406,7 @@ def print_world(month):
     text = font.render(f"Alive:  {len(alive_list)} ({round(len(alive_list)/(world_size*world_size)*100, 2)}%) {len(alive_list)-adults}:{adults} (child:adult)", True, default_font_color)
     world_board.blit(text, (5*(world_size*lifeform_draw_size + 1) + font_size//2, 1*(world_size*lifeform_draw_size + 1) + line_counter*font_size + font_size//2))
     line_counter = line_counter + 1
-    text = font.render(f"Avg Neighbors:  {avg_neighbors()}", True, default_font_color)
+    text = font.render(f"Year {month//months_in_a_year}.{month % months_in_a_year + 1} - Avg Neighbors:  {avg_neighbors()}", True, default_font_color)
     world_board.blit(text, (5*(world_size*lifeform_draw_size + 1) + font_size//2, 1*(world_size*lifeform_draw_size + 1) + line_counter*font_size + font_size//2))
     line_counter = line_counter + 1
     for msg in drawn_msgs[month % len(drawn_msgs)]:
@@ -1410,7 +1447,7 @@ def avg_neighbors():
     count = 0
     for creature in alive_list:
         count = count + creature.neighbor_count
-    return round(count/len(alive_list),2)
+    return round(count/max(len(alive_list), 1), 2)
 
 for creation in range(genesis_count):
     local_x = random.randrange(0, world_size)
@@ -1427,7 +1464,7 @@ for creation in range(genesis_count):
         id=creation, 
         male=xy,
         luck=random.randrange(luck_min_start, luck_max_start),
-        resilence=random.randrange(resilence_min_start, resilence_max_start),
+        willpower=random.randrange(willpower_min_start, willpower_max_start),
         intellect=random.randrange(intellect_min_start, intellect_max_start),
         health=random.randrange(min_health, max_health),
         lifetime=random.randrange(lifetime_min_start, lifetime_max_start),
@@ -1439,8 +1476,8 @@ for creation in range(genesis_count):
         piggy=random.randrange(piggy_min_start, piggy_max_start),
         food=random.randrange(food_min_start, food_max_start),
         greed=random.randrange(greed_min_start, greed_max_start),
-        mirth=random.randrange(mirth_min_start, mirth_max_start),
-        hostility=random.randrange(hostility_min_start, hostility_max_start),
+        happiness=random.randrange(happiness_min_start, happiness_max_start),
+        agression=random.randrange(agression_min_start, agression_max_start),
         miserly=random.randrange(miserly_min_start, miserly_max_start),
         charm=random.randrange(charm_min_start, charm_max_start),
         beauty=random.randrange(beauty_min_start, beauty_max_start),
@@ -1457,8 +1494,8 @@ for creation in range(genesis_count):
 
 month = 0
 if log_details:
-    detail_csv_file.write("date,name,family,x,y,lifetime,health,luck,resilence,skill,intellect,speed,mature,"
-                        "mature_age,male,pregnant,gestation,birth_month,hunger,piggy,food,greed,mirth,hostility,"
+    detail_csv_file.write("date,name,family,x,y,lifetime,health,luck,willpower,skill,intellect,speed,mature,"
+                        "mature_age,male,pregnant,gestation,birth_month,hunger,piggy,food,greed,happiness,agression,"
                         "miserly,charm,beauty,reach,kinship,love,hate,hate_first,parent_0_name,parent_0_family,"
                         "parent_1_name,parent_1_family,children_count,id,fights,scars,alive,begs,gifts,thefts,finds")
 while month < apocalypse and len(alive_list) < world_size*world_size:
@@ -1468,8 +1505,6 @@ while month < apocalypse and len(alive_list) < world_size*world_size:
     for lifeform in alive_list:
         if world[lifeform.x][lifeform.y] is lifeform:
             lifeform.take_turn(month)
-            if draw_world:
-                print_world(month)
             if log_details:
                 output = f"\n{month//months_in_a_year}.{month % months_in_a_year + 1},"
                 output = f"{output}{lifeform.name},"
@@ -1479,7 +1514,7 @@ while month < apocalypse and len(alive_list) < world_size*world_size:
                 output = f"{output}{lifeform.lifetime},"
                 output = f"{output}{lifeform.health},"
                 output = f"{output}{lifeform.luck},"
-                output = f"{output}{lifeform.resilence},"
+                output = f"{output}{lifeform.willpower},"
                 output = f"{output}{lifeform.skill},"
                 output = f"{output}{lifeform.intellect},"
                 output = f"{output}{lifeform.speed},"
@@ -1493,8 +1528,8 @@ while month < apocalypse and len(alive_list) < world_size*world_size:
                 output = f"{output}{lifeform.piggy},"
                 output = f"{output}{lifeform.food},"
                 output = f"{output}{lifeform.greed},"
-                output = f"{output}{lifeform.mirth},"
-                output = f"{output}{lifeform.hostility},"
+                output = f"{output}{lifeform.happiness},"
+                output = f"{output}{lifeform.agression},"
                 output = f"{output}{lifeform.miserly},"
                 output = f"{output}{lifeform.charm},"
                 output = f"{output}{lifeform.beauty},"
@@ -1536,5 +1571,7 @@ while month < apocalypse and len(alive_list) < world_size*world_size:
                 else:
                     print(f"I, {lifeform.name} {lifeform.family}, am dead.  I guess I'm a zombie'.  I should not be counted amoung the living anymore.")
                     alive_list.remove(lifeform)
+    if draw_world:
+        print_world(month)
     month = month + 1
 detail_csv_file.close()
