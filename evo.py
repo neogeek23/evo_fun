@@ -1,6 +1,5 @@
 # To Do
 #   poop
-#   love/hate bonus
 #   kin affects movement (kin can do more in general)
 #   rewrite stats method :(
 #   modularize this whole thing
@@ -17,11 +16,11 @@ import pygame
 log_details = True
 draw_world = True
 save_all_drawings = True
-save_some_drawings = 0     # 0 for no, otherwise months for how frequent to snap a shot
+save_some_drawings = 0      # 0 for no, otherwise months for how frequent to snap a shot
 
-genesis_count = 2000         # how many lifeforms to start intellecth
-world_size = 500             # how big is the flat earth
-apocalypse_years = 9999      # how many years until no more months can pass
+genesis_count = 200         # how many lifeforms to start intellecth
+world_size = 200            # how big is the flat earth
+apocalypse_years = 99       # how many years until no more months can pass
 months_in_a_year = 12       # how many months in a year
 world_difficulty = 100      # the upper bound for rolls, the pve aspect of the simulation
 lifeform_draw_size = 3      # how many pixels a lifeform will get when drawn on the world_board
@@ -433,6 +432,7 @@ class LifeForm:
             delta_y = random.randrange(-1, 2)
             if self.intellect > 0 and not self.pregnant:
                 target_neighbor = None
+                hate_first_group = False
                 for neighbor in self.countrymen:    # may want to change later, neighbors uses reach and countrymen uses intellect (probably should be charm though)
                     if target_neighbor is None:
                         target_neighbor = neighbor
@@ -454,26 +454,32 @@ class LifeForm:
                     # follow your heart
                     elif self.hate_first and getattr(target_neighbor, self.hate) > getattr(neighbor, self.hate):
                         target_neighbor = neighbor
+                        hate_first_group = True
                     elif not self.hate_first and getattr(target_neighbor, self.love) < getattr(neighbor, self.love):
                         target_neighbor = neighbor
                     # follow your demagogue
                     elif self.hate_first and neighbor.hate_first and not target_neighbor.hate_first:
                         target_neighbor = neighbor
+                        hate_first_group = False
                     elif not self.hate_first and not neighbor.hate_first and target_neighbor.hate_first:
                         target_neighbor = neighbor
                     target_x = target_neighbor.x
                     target_y = target_neighbor.y
                 if target_neighbor is not None and self.hate_first:
-                    if target_neighbor.x > self.x:
+                    if target_neighbor.x > self.x and not hate_first_group:
                         delta_x = -1
-                    elif target_neighbor.x < self.x:
+                    elif target_neighbor.x < self.x and hate_first_group:
                         delta_x = 1
+                    elif hate_first_group:
+                        delta_x = 0
                     else:
                         delta_x = random.choice([1,-1])
-                    if target_neighbor.y > self.y:
+                    if target_neighbor.y > self.y and not hate_first_group:
                         delta_y = -1
-                    elif target_neighbor.y < self.y:
+                    elif target_neighbor.y < self.y and hate_first_group:
                         delta_y = 1
+                    elif hate_first_group:
+                        delta_y = 0
                     else:
                         delta_y = random.choice([1,-1])
                 elif target_neighbor is not None:
